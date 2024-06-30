@@ -1,4 +1,25 @@
 function [res, Errorbar] = TraceSolver(I, initialGuess, iters, loop, offspringNum, eps)
+    % TraceSolver. This function solves for an optimized trace using evolutionary algorithms, leveraging multiple iteration strategies.
+    % 此函数使用多种迭代策略的进化算法来求解优化的trace。
+    % The function iteratively improves the trace estimate using a series of solution strategies including vanilla, generalized projection,
+    % and principal component methods, each with specific adaptations for enhanced performance.
+    % Usage:
+    %     [res, Errorbar] = TraceSolver(I, initialGuess, iters, loop, offspringNum, eps)
+    %
+    % Input:
+    %     I: Input trace data (size: Fn x Dn)
+    %     initialGuess: Initial guess for the solution (default: computed if empty)
+    %     iters: Array with number of iterations per method stage
+    %     loop: Number of loops per iteration phase
+    %     offspringNum: Number of offspring solutions to generate per iteration
+    %     eps: Convergence threshold
+    %
+    % Output:
+    %     res: Struct containing the optimized trace, error metrics, and iteration count
+    %     Errorbar: Error metrics for solution robustness analysis (optional)
+    %
+    % AUTHOR: Huang Xingzhao, June 30, 2024
+
     N = size(I, 2);
 
     if isempty(initialGuess)
@@ -78,7 +99,7 @@ function [res, Errorbar] = TraceSolver(I, initialGuess, iters, loop, offspringNu
             for i = 1:pcgp_svd_iter
                 [P, G] = principal_component_generlized_projection_svd(I, P, G, 1);
             end
-            [P, ~,~] = removeFirstOrderPhase(P);
+            [P, ~, ~] = removeFirstOrderPhase(P);
             P_bs(:, j) = P;
         end
         Errorbar(:, 1) = max(abs(P_bs).^2 - abs(P).^2, [], 2);
