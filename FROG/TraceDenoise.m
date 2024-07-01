@@ -47,16 +47,11 @@ function S = background_subtraction(I, n)
 end
 
 function S = corner_suppression(I, D, F, D_width)
-    marginal = sum(I, 2);
-    marginal = marginal - median(marginal);
-    marginal = marginal / max(marginal);
-
-    autocorrelation = sum(I, 1);
-    autocorrelation = autocorrelation - median(autocorrelation);
-    autocorrelation = autocorrelation / max(autocorrelation);
-
-    marginal_width = PulseMainWidth(F, marginal, 1e-4);
-    ac_width = PulseMainWidth(D, autocorrelation, 1e-4);
+    mg = marginal(I);
+    ac = autocorrelation(I);
+    
+    marginal_width = PulseMainWidth(F, mg, 1e-4);
+    ac_width = PulseMainWidth(D, ac, 1e-4);
 
     % N_width = sum(abs(D) < D_width);
     % F_width = N_width / D_width / 4;

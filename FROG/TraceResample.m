@@ -72,13 +72,8 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
     F = F - Fc;
     D = D - Dc;
 
-    marginal = sum(I, 2);
-    marginal = marginal - median(marginal);
-    marginal = marginal / max(marginal);
-
-    autocorrelation = sum(I, 1);
-    autocorrelation = autocorrelation - median(autocorrelation);
-    autocorrelation = autocorrelation / max(autocorrelation);
+    mg = marginal(I);
+    ac = autocorrelation(I);
 
     switch bitshift(int8(isInputN), 2) ...
                 + bitshift(int8(~isempty(Dm)), 1) ...
@@ -87,8 +82,8 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
             [~, Do] = FTconvert(D, maxN);
             Dm = -Do(1);
         case {1, 3, 5} %eps
-            sp_eps = PulseMainWidth(F, marginal, eps);
-            it_eps = PulseMainWidth(D, autocorrelation, eps);
+            sp_eps = PulseMainWidth(F, mg, eps);
+            it_eps = PulseMainWidth(D, ac, eps);
 
             if ~isempty(Dm)
                 Dm = max(Dm, it_eps / 2);
@@ -117,12 +112,12 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
             % [~, Do] = FTconvert(Do, N);
     end
 
-    spectrum_rms_width = PulseWidth(F, marginal, 'rms') / sqrt(2);
-    It_rms_width = PulseWidth(D, autocorrelation, 'rms') / sqrt(2);
+    spectrum_rms_width = PulseWidth(F, mg, 'rms') / sqrt(2);
+    It_rms_width = PulseWidth(D, ac, 'rms') / sqrt(2);
 
     ac_factor = 1.54;
-    spectrum_fwhm = PulseWidth(F, marginal, 'fwhm') / ac_factor;
-    It_fwhm = PulseWidth(D, autocorrelation, 'fwhm') / ac_factor;
+    spectrum_fwhm = PulseWidth(F, mg, 'fwhm') / ac_factor;
+    It_fwhm = PulseWidth(D, ac, 'fwhm') / ac_factor;
     isp = spectrum_fwhm * It_fwhm; %Intensity and Spectrum product
     Mi = It_fwhm / (Do(2) - Do(1));
 
