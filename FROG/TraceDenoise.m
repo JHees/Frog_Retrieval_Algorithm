@@ -18,10 +18,14 @@ function S = TraceDenoise(I, D, F, background_subtraction_line, corner_suppressi
     %     S: Denoised FROG Trace (size: Fn x Dn)E
     %
     % AUTHOR: Huang Xingzhao, June 30, 2024
+    [NF, ND] = size(I);
+    if isscalar(D)
+        D = (-ND / 2:ND / 2 - 1)' * D;
+    end
     [~, maxInd] = max(I, [], 'all');
     [FcInd, DcInd] = ind2sub(size(I), maxInd);
     F = F(:) - F(FcInd);
-    D = D(:)' - D(DcInd);
+    D = D(:) - D(DcInd);
     S = I;
 
     if ~isempty(background_subtraction_line)
@@ -31,7 +35,7 @@ function S = TraceDenoise(I, D, F, background_subtraction_line, corner_suppressi
     if ~isempty(corner_suppression_width)
         S = corner_suppression(S, D, F, corner_suppression_width * 2);
     end
-    
+
     if ~isempty(ft_low_pass_filter)
         S = fourier_low_pass_filter(S, ft_low_pass_filter);
     end
@@ -59,7 +63,7 @@ function S = corner_suppression(I, D, F, D_width)
 
     F_width = marginal_width * D_width / ac_width;
 
-    super_Gauss = exp(-16 * log(2) * ((F / F_width).^2 + (D / D_width).^2).^2);
+    super_Gauss = exp(-16 * log(2) * ((F / F_width).^2 + (D' / D_width).^2).^2);
     S = I .* super_Gauss;
 end
 
