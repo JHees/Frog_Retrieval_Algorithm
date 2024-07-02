@@ -49,7 +49,7 @@ end
 function S = corner_suppression(I, D, F, D_width)
     mg = marginal(I);
     ac = autocorrelation(I);
-    
+
     marginal_width = PulseMainWidth(F, mg, 1e-4);
     ac_width = PulseMainWidth(D, ac, 1e-4);
 
@@ -58,7 +58,8 @@ function S = corner_suppression(I, D, F, D_width)
 
     F_width = marginal_width * D_width / ac_width;
 
-    super_Gauss = exp(-16 * log(2) * ((F / F_width).^2 + (D' / D_width).^2).^2);
+    % super_Gauss = exp(-16 * log(2) * ((F / F_width).^2 + (D' / D_width).^2).^2);
+    super_Gauss = 1./(1+exp((4 * sqrt(log(2)) * (F / F_width).^2 + (D' / D_width).^2).^4));
     S = I .* super_Gauss;
 end
 
