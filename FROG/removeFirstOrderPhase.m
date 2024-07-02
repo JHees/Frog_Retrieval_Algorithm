@@ -80,8 +80,8 @@ while abs(fit_p(1)) >= 1 / N
     ang = unwrap(ang);
     fit_p = polyfit(x(ind), ang(ind), 1);
 end
-fit_p = polyfit(x(indCenter-1:indCenter+1),ang(indCenter-1:indCenter+1),1);
-ang = ang - fit_p(1) .* x - fit_p(2);
+% fit_p = polyfit(x(indCenter-1:indCenter+1),ang(indCenter-1:indCenter+1),1);
+% ang = ang - fit_p(1) .* x - fit_p(2);
 y = abs(y) .* exp(1i * ang);
 phi1 = phi1 / 2 / pi;
 end
