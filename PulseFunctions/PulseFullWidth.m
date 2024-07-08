@@ -1,4 +1,4 @@
-function width = PulseFullWidth(x, y, level)
+function [width, region] = PulseFullWidth(x, y, level)
     % PulseFullWidth. This function calculates the full width of a pulse at a specified level.
     % 此函数用于计算level上脉冲的全宽。
     % It determines the full width at the given level by inverting the pulse measurement and adjusting from the pulse ends.
@@ -18,6 +18,8 @@ function width = PulseFullWidth(x, y, level)
     %
     % AUTHOR: Huang Xingzhao, June 30, 2024
 
-    w = PulseCrossWidth(x, max(y) - y, max(y) - level);
-    width = x(end) - x(1) - max(w);
+    [w, r] = PulseCrossWidth(x, max(y) - y, max(y) - level);
+    [max_w, ind] = max(w);
+    width = x(end) - x(1) - max_w;
+    region = [r(ind, 2), r(ind, 1)];
 end

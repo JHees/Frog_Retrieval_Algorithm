@@ -99,7 +99,7 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
                 minN = max(minN, 2 * sp_eps * Dm); % keep Fm = N/(4*Dm)> sp_eps /2
                 maxN = max(minN, maxN);
             end
-            Do = D;
+            Do = FTcutoff(D, Dm);
         case 2 % Dm
             Do = FTcutoff(D, Dm);
             N = maxN(min(length(Do), maxN), minN);
@@ -130,7 +130,7 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
     if N > maxN
         M = sqrt(isp * maxN);
         k = round(Mi / M);
-        N = N / k^2;
+        N = min(N / k^2,maxN);
     end
     if N < minN
         M = sqrt(isp * minN);
@@ -152,9 +152,7 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
 
     % I = I(:, ismember(D, Do)); %会由于存在数值误差而失效
     I = I(:, ismembertol(D, Do, 1e-8));
-    iFT = 1 / N * exp(-2i * pi * D .* F.');
-    FT = exp(2i * pi * D.' .* Fo);
-    Io = real(FT * iFT * I);
+    Io = FreqTransfer(F, I, Fo);
     Io = Io ./ max(Io, [], "all");
     Io(Io < 0) = 0;
     if size(Io, 2) < N

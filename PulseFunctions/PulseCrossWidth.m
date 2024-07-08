@@ -22,7 +22,8 @@ function [width, crossPosition] = PulseCrossWidth(x, y, level)
 
     x = x(:)';
     y = y(:)';
-
+    [x, ind] = sort(x);
+    y = y(ind);
     x = [x, x(end) + x(2) - x(1)];
     y = [y, y(1)];
 
@@ -44,9 +45,6 @@ function [width, crossPosition] = PulseCrossWidth(x, y, level)
     y_interp = (level - y(region)) ./ (y(region + 1) - y(region)); % It wont be divide to 0
 
     crossPosition = x(region) + y_interp .* (x(region + 1) - x(region));
-    if iscolumn(crossPosition)
-        crossPosition = crossPosition';
-    end
     width = mod(crossPosition(:, 2) - crossPosition(:, 1), x(end) - x(1));
 
 end

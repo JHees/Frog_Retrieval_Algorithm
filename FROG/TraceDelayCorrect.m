@@ -31,12 +31,18 @@ function [dt, Delay_time, Delay_N] = TraceDelayCorrect(I, D, F, iter)
     end
 
     for i = 1:iter
-        shg = I(:, end / 2 + 1);
-        shg_ft = fftshift(ifft(shg));
-        p = mypeak(FTconvert(F), abs(shg_ft).^2);
+        ac = autocorrelation(I);
+        [~, ind] = max(ac);
+        shg = I(:, ind);
+        t = FTconvert(F);
+        iFT = 1 / length(t) * exp(2i * pi * t .* F');
+        shg_ft = abs(iFT * shg).^2;
+        p = mypeak(t, shg_ft);
+        % shg_ft = fftshift(ifft(shg));
+        % p = mypeak(FTconvert(F), abs(shg_ft).^2);
         Delay_time = (abs(p(1) - p(2)) + abs(p(1) - p(3))) / 2;
 
-        p = mypeak(autocorrelation(I));
+        p = mypeak(ac);
         Delay_N = (abs(p(1) - p(2)) + abs(p(1) - p(3))) / 2;
         dt_res(i + 1) = Delay_time / Delay_N;
         if abs(dt_res(i + 1) - dt_res(i)) < 1e-8
@@ -52,7 +58,8 @@ function p = mypeak(x, y)
         x = 1:length(y);
     end
     y = y / max(y);
-    [~, pos_ind, ~, prominence] = findpeaks(y, "WidthReference", "halfheight", "MinPeakHeight", 0);
+    w = PulseMainWidth(1:length(y), y, 0.5); %瑞利距离
+    [~, pos_ind, ~, prominence] = findpeaks(y, "WidthReference", "halfheight", "MinPeakHeight", 1e-4, "MinPeakDistance", w);
     [~, ind] = sort(prominence, 'descend');
     pos_ind = pos_ind(ind);
     p = zeros(1, 3);

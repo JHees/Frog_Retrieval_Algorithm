@@ -27,7 +27,7 @@ function S = TraceDenoise(I, D, F, background_subtraction_line, corner_suppressi
     F = F(:) - F(FcInd);
     D = D(:) - D(DcInd);
     S = I;
-
+    
     if ~isempty(background_subtraction_line)
         S = background_subtraction(S, background_subtraction_line);
     end
@@ -39,6 +39,7 @@ function S = TraceDenoise(I, D, F, background_subtraction_line, corner_suppressi
     if ~isempty(ft_low_pass_filter)
         S = fourier_low_pass_filter(S, ft_low_pass_filter);
     end
+
 end
 
 function S = background_subtraction(I, n)
@@ -67,7 +68,7 @@ function S = fourier_low_pass_filter(I, rou)
     S_ft = fft2(I);
     S_ft = fftshift(S_ft);
     [NF, ND] = size(I);
-    [F, D] = meshgrid((-NF / 2:NF / 2 - 1), (-ND / 2:ND / 2 - 1));
+    [D, F] = meshgrid((-ND / 2:ND / 2 - 1), (-NF / 2:NF / 2 - 1));
     dis = sqrt((2 * F / NF).^2 + (2 * D / ND).^2);
     filter = dis <= rou;
     S_ft_filter = S_ft .* filter;
