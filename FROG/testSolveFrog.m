@@ -1,92 +1,159 @@
 clear
 % units: fs,nm,PHz
-c = 299.77;
+c = 299.792458;
 
-[F, T] = FTconvert((0:1:5000 - 1)');
+[F, T] = FTconvert((0:1:2000 - 0.1)');
 N = floor(numel(T) / 2) * 2;
-FF = FTconvert(F);
-wavelength = 850;
-f0 = 0;
+dT = T(2) - T(1);
+dt = dT;
+wavelength = 1e4;
+f0 = c / wavelength;
 
-Delay = 200;
-gauss = @(t0, tou)exp(- (T - t0).^2 ./ tou.^2 * 2 * log(2)) .* exp(1i * 2 * pi * (f0 .* T));
+Delay = 0.5/f0*0;
+gauss = @(t0, tou)exp(- (T - t0).^2 ./ tou.^2 * 2 * log(2)).*exp(-2i*pi*f0*(-t0));
 
-A = [1, 1];
+A = [ones(size(T)),ones(size(T)).*exp(-2i*pi*0.5)];
 t0 = [0, Delay];
 FWHM = [100, 100];
-P = sum(gauss(t0, FWHM) .* A, 2);
-% P = flip(P);
+ps = gauss(t0, FWHM) .* A;
+P = sum(ps, 2);
+P = (P); 
 fm = 0.03;
 dm = 600;
+
+figure(6)
+clf
+plotPulse(T, P, [], dm, fm);
+% clf
+% plot(T,real(ps(:,1)),T,real(ps(:,2)))
 
 % clear
 % load('pulse_set.mat')
 % f0 = 0;
 % [F, T] = FTconvert(time' / 1e-15);
 % dT = T(2)-T(1);
-% dT = 1;
+% dt = dT;
 % P = pulse_set(3, :).';
+% G = pulse_set(4,:).';
 % P = P ./ max(abs(P));
 % P = flip(P);
+% G = G ./ max(abs(G));
+% G = flip(G);
 % fm = 0.3;
-% dm = 75;
-
-[I_withoutNoise] = TraceGenerate(P);
+% dm = 100;
+%%
+[I_withoutNoise_origin] = TraceGenerate(P);
 pulse_spectrum = abs(fftshift(fft(P))).^2;
-[~, maxPsp] = max(pulse_spectrum);
-Fc_sp = F(maxPsp);
+isConvert2Wlen = 0;
+
+if isConvert2Wlen
+    ww=50;
+    dw = 0.5;
+    wlen_I = wavelength/2-ww/2:dw:wavelength/2+ww/2;
+    wlen_sp= wavelength-ww:dw:wavelength+ww;
+    I_withoutNoise = FreqTransfer(F+2*f0,I_withoutNoise_origin,c./wlen_I);
+    pulse_spectrum = FreqTransfer(F+f0,pulse_spectrum,c./wlen_sp);
+else
+    I_withoutNoise = I_withoutNoise_origin;
+end
+% figure(1)
+% plot(wlen_I,I_withoutNoise(:,end/2+1),c./(F+f0*2),I_withoutNoise_origin(:,end/2+1))
+% plotTrace(I_withoutNoise_origin, T, F);
+
 % [P, P_sp, df0] = removeFirstOrderPhase(T, P); % P_sp has been removed f0
 %% add Noise
 bitDepth = 16;
-maxLevel = 2^bitDepth -1;
-
-alpha = 0.1;
-additiveNoiseLevel = alpha * maxLevel;
+alpha = 0;
 
 if alpha == 0
     I = I_withoutNoise;
 else
-    I = I_withoutNoise .* (1 + alpha * randn(N)) + alpha * poissrnd(additiveNoiseLevel, N) / additiveNoiseLevel;
+    maxLevel = 2^bitDepth -1;
+    additiveNoiseLevel = alpha * maxLevel;
+    I = I_withoutNoise .* (1 + alpha * randn(size(I_withoutNoise))) + alpha * poissrnd(additiveNoiseLevel, size(I_withoutNoise)) / additiveNoiseLevel;
     I(I < 0) = 0;
     I = round(I .* maxLevel) ./ maxLevel;
-    I(I>1)=1;
+    I(I > 1) = 1;
 end
-[I_withoutNoise, Do_wn, Fo_wn, Fc_wn] = TraceResample(I_withoutNoise, T, F - 2 * Fc_sp, 128, 'eps', 1e-4);
-figure(5)
-plotTrace(I_withoutNoise, Do_wn, Fo_wn);
-%% Delay Correct
-dt = TraceDelayCorrect(I, 0.5, F, 50);
-%% denoise
-S_denoise = TraceDenoise(I, dt, F, 5, 600, 1);
-%% resample
-[S_resample, Do, Fo, Fc] = TraceResample(S_denoise, dt, F - 2 * Fc_sp, 128, 'eps', 1e-4);
-S = TraceMarginCorrect(S_resample, Do, Fo, Fc, F - Fc_sp, pulse_spectrum);
 
+if isConvert2Wlen
+    [I_withoutNoise_re, Do_wn, Fo_wn, Fc_wn] = TraceResample(I_withoutNoise, dT, c ./ wlen_I, 128, 'eps', 1e-4);
+    [I_withoutNoise_orre, Do_wn, Fo_wn, Fc_wn] = TraceResample(I_withoutNoise_origin, dT, c ./ wlen_I, 128, 'eps', 1e-4);
+else
+    [I_withoutNoise_re, Do_wn, Fo_wn, Fc_wn] = TraceResample(I_withoutNoise, dT, F, 128, 'eps', 1e-4);
+end
+figure(5)
+plotTrace(I_withoutNoise_re, Do_wn, Fo_wn + Fc_wn);
+return
+%% Trace Correct
+if isConvert2Wlen
+    I_trans = FreqTransfer(c./wlen_I, I,F+f0*2);
+    pulse_spectrum_trans = FreqTransfer(c./wlen_sp, pulse_spectrum,F+f0);
+else
+    I_trans = I;
+    pulse_spectrum_trans = pulse_spectrum;
+end
 % figure(6)
-% plotTrace(I, T, F);
+% plot(c./(F+f0*2),I_trans(:,end/2+1),wlen_I,I(:,end/2+1),c./(F+f0*2),I_withoutNoise_origin(:,end/2+1))
+%%
+% dt = TraceDelayCorrect(I_trans, 1, F, 50)
+if alpha == 0
+    S_denoise = I_trans;
+else
+    S_denoise = TraceDenoise(I_trans, dt, F, 5, 600, 0.5);
+end
+
+% resample
+[S_resample, Do, Fo, Fc] = TraceResample(S_denoise, dt, F, 128, 'eps', 1e-4);
+% Dm = dm;
+% N = 128;
+% dd = Dm / N*2;
+% Do = (-N/2:N/2-1)*dd;
+% Fo = FTconvert(Do);
+% [Dq, Fq] = meshgrid(Do, Fo);
+% S_resample = interp2(T, F, S_denoise, Dq, Fq, 'linear', 0);
+% S = S_resample;
+S = TraceMarginCorrect(S_resample, Do, Fo, Fc, F, pulse_spectrum_trans);
+%%
 figure(7)
-plotTrace(S_resample, Do, Fo);
+plotTrace(S, Do, Fo);
+title("denoise")
 %% Solve
 [pcgp_svd] = solveFrog_PCGPA(S, [], [2, 200], 1e-4, 'svd');
-[solver, ErrorBar] = TraceSolver(S, [], [50, 200], 5, 5, 1e-4);
-figure(1)
-plot(T, abs(P) / max(abs(P)), Do, [abs(pcgp_svd.P), abs(solver.P)])
-legend(["origin", "pcgp svd", "solve"])
+[solver, ErrorBar] = TraceSolver(S, [], [5, 200], 3, 5, 1e-4);
+%%
+% figure(1)
+% plot(T, abs(P) / max(abs(P)), Do, [abs(pcgp_svd.P), abs(solver.P)])
+% legend(["origin", "pcgp svd", "solve"])
+
 figure(2)
 semilogy( ...
     1:sum(pcgp_svd.iter), pcgp_svd.err, ...
     1:sum(solver.iter), solver.err)
+title("Retrieved Error")
+xlabel("iter")
 legend(["pcgp svd", "solve"])
 
 figure(3)
 clf
-plotPulse(T, P, [], dm, fm);
 plotPulse(Do, solver.P, ErrorBar, dm, fm);
+% plotPulse(Do, pcgp_svd.G, [], dm, fm);
+plotPulse(T, P, [], dm, fm);
+% subplot(2,1,1)
+% legend(["pcgp svd","origin"])
+
+figure(4)
+clf
 plotPulse(Do, pcgp_svd.P, [], dm, fm);
+plotPulse(T, P, [], dm, fm);
+subplot(2,1,1)
+legend(["pcgp svd","origin"])
+
 figure(8)
-retrievedTrace = TraceGenerate(solver.P, solver.P);
+retrievedTrace = TraceGenerate(solver.P);
 plotTrace(retrievedTrace, Do, Fo);
-realError = TraceError(I_withoutNoise, retrievedTrace)
+title("retrieved")
+realError = TraceError(I_withoutNoise_re, retrievedTrace)
 %% marginals
 % figure(4)
 % subplot(2,1,1)

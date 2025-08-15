@@ -1,18 +1,20 @@
-function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin)
+function [Io, Do, Fo, Dc, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin)
     % TraceResample. This function generates an NxN trace by resampling the original trace.
     % 由于坐标需要满足傅里叶变换(FTconvert)，但直接进行插值会导致trace失真. 此方法将重新抽样D坐标，并通过傅里叶变换转换F坐标，得到NxN trace
     % Coordinates must satisfy the Fourier transform (FT convert), but direct interpolation could distort the trace.
     % This method resamples the D (Delay) coordinates and uses Fourier transform to convert the F (Frequency) coordinates,
     % resulting in an NxN trace.
     % Usage:
-    %     [I, Do, Fo] = cutoffTrace(I, D, F)
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, N)
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, [maxN, minN])
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, N, true)
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, 'Dm', Dm)
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, [maxN, minN], 'Dm', Dm)
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, 'eps', eps)
-    %     [I, Do, Fo] = cutoffTrace(I, D, F, [maxN, minN], 'eps', eps)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, N)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, [maxN, minN])
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, N, true)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, 'Dm', Dm)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, [maxN, minN], 'Dm', Dm)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, 'eps', eps)
+    %     [I, Do, Fo, Fc] = cutoffTrace(I, D, F, [maxN, minN], 'eps', eps)
+    %
+    %     重复已有的Do,Fo进行重采样请使用TraceResampleAgain
     %
     % Input:
     %     I: Original Frog Trace (size: Fn x Dn)
@@ -65,16 +67,24 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
         D = (-ND / 2:ND / 2 - 1)' .* D;
     end
 
-    [~, maxTraceIndex] = max(I, [], 'all');
-    [FcIndex, DcIndex] = ind2sub(size(I), maxTraceIndex);
-    Fc = F(FcIndex);
-    Dc = D(DcIndex);
-    F = F - Fc;
-    D = D - Dc;
+    % [~, maxTraceIndex] = max(I, [], 'all');
+    % [FcIndex, DcIndex] = ind2sub(size(I), maxTraceIndex);
+    % Fc = F(FcIndex);
+    % Dc = D(DcIndex);
+    % F = F - Fc;
+    % D = D - Dc;
 
     mg = marginal(I);
     ac = autocorrelation(I);
 
+    mg_int = cumtrapz(mg);
+    ac_int = cumtrapz(ac);
+    [~,Fc_ind] = min(abs(mg-mg_int(end/2)));
+    [~,Dc_ind] = min(abs(ac-ac_int(end/2)));
+    Fc = F(Fc_ind);
+    Dc = D(Dc_ind);
+    F = F - Fc;
+    D = D - Dc;
     switch bitshift(int8(isInputN), 2) ...
                 + bitshift(int8(~isempty(Dm)), 1) ...
                 + bitshift(int8(~isempty(eps)), 0)
@@ -130,7 +140,7 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
     if N > maxN
         M = sqrt(isp * maxN);
         k = round(Mi / M);
-        N = min(N / k^2,maxN);
+        N = min(N / k^2, maxN);
     end
     if N < minN
         M = sqrt(isp * minN);
@@ -142,7 +152,7 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
     else
         N = floor(N / 2) * 2;
     end
-    [Fo, Do] = FTconvert(Do, N, k);
+    [Fo, Do] = FTconvert(Do, N, max(k,1));
 
     M1 = It_fwhm / (Do(2) - Do(1));
     M2 = spectrum_fwhm / (Fo(2) - Fo(1));
@@ -155,7 +165,8 @@ function [Io, Do, Fo, Fc] = TraceResample(I, D, F, N, isPower2Required, varargin
     Io = FreqTransfer(F, I, Fo);
     Io = Io ./ max(Io, [], "all");
     Io(Io < 0) = 0;
-    if size(Io, 2) < N
+    if size(Io, 2) < size(Io, 1)
         Io = [zeros(N, ceil((N - size(Io, 2)) / 2)), Io, zeros(N, floor((N - size(Io, 2)) / 2))];
     end
+    Io=real(Io);
 end

@@ -1,4 +1,4 @@
-function [res, Errorbar] = TraceSolver(I, initialGuess, iters, loop, offspringNum, eps)
+function res = TraceSolver(I, initialGuess, iters, loop, offspringNum, eps)
     % TraceSolver. This function solves for an optimized trace using evolutionary algorithms, leveraging multiple iteration strategies.
     % 此函数使用多种迭代策略的进化算法来求解优化的trace。
     % The function iteratively improves the trace estimate using a series of solution strategies including vanilla, generalized projection,
@@ -55,12 +55,12 @@ function [res, Errorbar] = TraceSolver(I, initialGuess, iters, loop, offspringNu
                     };
         [P_restore, err_restore] = Solver(I, P_restore, loop, sols, sols_var);
         P_restore = P_restore(:, 1:min(size(P_restore, 2), offspringNum));
-
-        if err_restore(end, 1) < err
+        err_restore = err_restore(:, 1:min(size(err_restore, 2), offspringNum));
+        if err_restore(end,1) < err
             P = P_restore(:, 1);
             err_count = err_count + 1;
             res.err((err_count - 1) * loop + 1:err_count * loop) = err_restore(:, 1)';
-            err = err_restore(end, end);
+            err = err_restore(end,1);
             if err < eps
                 break;
             end
@@ -85,27 +85,6 @@ function [res, Errorbar] = TraceSolver(I, initialGuess, iters, loop, offspringNu
         res.P = P ./ max(abs(P));
         res.iter = err_count * loop + i;
         res.err = [res.err, err_svd(1:i)];
-    end
-    if nargout == 2 % error bar
-        boot_strap = 10;
-        P_bs = zeros(N, boot_strap);
-        Errorbar = zeros(N, 4);
-        for j = 1:boot_strap
-            ind = randperm(N);
-            ind = ind(1:N / 2);
-            P = res.P;
-            P(ind) = 0;
-            G = P;
-            for i = 1:pcgp_svd_iter
-                [P, G] = principal_component_generlized_projection_svd(I, P, G, 1);
-            end
-            [P, ~, ~] = removeFirstOrderPhase(P);
-            P_bs(:, j) = P;
-        end
-        Errorbar(:, 1) = max(abs(P_bs).^2 - abs(P).^2, [], 2);
-        Errorbar(:, 2) = min(abs(P_bs).^2 - abs(P).^2, [], 2);
-        Errorbar(:, 3) = max(angle(P_bs) - angle(P), [], 2);
-        Errorbar(:, 4) = min(angle(P_bs) - angle(P), [], 2);
     end
 
 end

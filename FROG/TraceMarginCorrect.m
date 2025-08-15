@@ -33,7 +33,7 @@ function S = TraceMarginCorrect(S, D, F, Fc, F_sp, spectrum)
     mg = marginal(S);
 
     D_sp = FTconvert(F_sp);
-    spectrum_rs = FreqTransfer(F_sp, spectrum, F + Fc / 2);
+    spectrum_rs = FreqTransfer(F_sp, spectrum, F + Fc);
     spectrum_conv = conv(spectrum_rs, spectrum_rs, "same");
     spectrum_conv = spectrum_conv / max(spectrum_conv);
 

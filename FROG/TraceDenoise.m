@@ -28,18 +28,21 @@ function S = TraceDenoise(I, D, F, background_subtraction_line, corner_suppressi
     D = D(:) - D(DcInd);
     S = I;
     
-    if ~isempty(background_subtraction_line)
+    if ~isempty(background_subtraction_line) && background_subtraction_line
         S = background_subtraction(S, background_subtraction_line);
     end
 
-    if ~isempty(corner_suppression_width)
-        S = corner_suppression(S, D, F, corner_suppression_width * 2);
-    end
-
     if ~isempty(ft_low_pass_filter)
-        S = fourier_low_pass_filter(S, ft_low_pass_filter);
+        S = fourier_low_pass_filter(S, ft_low_pass_filter);%0-sqrt(2)范围
     end
 
+    if ~isempty(corner_suppression_width)% 截止半径
+        if isscalar(corner_suppression_width)
+            S = corner_suppression(S, D, F, corner_suppression_width * 2);
+        else
+            S = corner_suppression(S, D, F, corner_suppression_width(1) * 2,corner_suppression_width(2)*2);
+        end
+    end
 end
 
 function S = background_subtraction(I, n)
@@ -47,7 +50,7 @@ function S = background_subtraction(I, n)
     S(S < 0) = 0;
 end
 
-function S = corner_suppression(I, D, F, D_width)
+function S = corner_suppression(I, D, F, D_width, F_width)
     mg = marginal(I);
     ac = autocorrelation(I);
 
@@ -56,9 +59,9 @@ function S = corner_suppression(I, D, F, D_width)
 
     % N_width = sum(abs(D) < D_width);
     % F_width = N_width / D_width / 4;
-
-    F_width = marginal_width * D_width / ac_width;
-
+    if nargin <=4 || isempty(F_width)
+        F_width = marginal_width * D_width / ac_width;
+    end
     % super_Gauss = exp(-16 * log(2) * ((F / F_width).^2 + (D' / D_width).^2).^2);
     super_Gauss = 1./(1+exp((4 * sqrt(log(2)) * (F / F_width).^2 + (D' / D_width).^2).^4));
     S = I .* super_Gauss;

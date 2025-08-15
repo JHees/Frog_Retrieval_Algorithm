@@ -17,9 +17,19 @@ function [res] = solveFrog_PCGPA(I, initialGuess, iterMax, eps, method)
         P = init.P;
         G = init.P;
     else
-        P = initialGuess(:);
-        G = initialGuess(:);
-        init.err = TraceError(I, P);
+        if isvector(initialGuess)
+            P = initialGuess(:);
+            G = initialGuess(:);
+        else
+            if size(initialGuess,2)==2
+                P = initialGuess(:,1);
+                G = initialGuess(:,2);
+            else
+                P = initialGuess(1,:).';
+                G = initialGuess(2,:).';
+            end
+        end
+        init.err = TraceError(I, TraceGenerate(P,G));
         init.iter = 1;
         iterMax = iterMax(end);
     end
@@ -69,7 +79,7 @@ function [P, G, err] = principal_component_generlized_projection(I, P, G, b)
     ind_outer_invers = (1:N)' + mod((0:N:N^2 - 1) + [0; flip(N:N:N^2 - 1)'], N^2);
 
     outer = (P) .* (G.');
-    outer = outer + outer.'; % SHG
+    % outer = outer + outer.'; % SHG
     shifting_outer = outer(ind_outer);
     sig = circshift(shifting_outer, N / 2, 2);
     sig_sp = circshift(fft(sig, [], 1), N / 2, 1);
@@ -77,6 +87,7 @@ function [P, G, err] = principal_component_generlized_projection(I, P, G, b)
     sig = data_constraint(I, sig_sp, b);
     shifting_outer = circshift(sig, N / 2, 2);
     outer = shifting_outer(ind_outer_invers);
+    outer = outer + outer.'; % SHG
 
     P = outer * outer.' * P;
     G = outer.' * outer * G;
@@ -94,7 +105,7 @@ function [P, G, err] = principal_component_generlized_projection_svd(I, P, G, b)
     ind_outer_invers = (1:N)' + mod((0:N:N^2 - 1) + [0; flip(N:N:N^2 - 1)'], N^2);
 
     outer = (P) .* (G.');
-    outer = outer + outer.'; % SHG
+    % outer = outer + outer.'; % SHG
     shifting_outer = outer(ind_outer);
     sig = circshift(shifting_outer, N / 2, 2);
     sig_sp = circshift(fft(sig, [], 1), N / 2, 1);
@@ -102,10 +113,11 @@ function [P, G, err] = principal_component_generlized_projection_svd(I, P, G, b)
     sig = data_constraint(I, sig_sp, b);
     shifting_outer = circshift(sig, N / 2, 2);
     outer = shifting_outer(ind_outer_invers);
-
-    [s, u, v] = svd(outer);
-    P = s(:, 1) ./ sqrt(u(1, 1));
-    G = conj(v(:, 1)) ./ sqrt(u(1, 1));
+    outer = outer + outer.'; % SHG
+    
+    [u, s, v] = svd(outer);
+    P = u(:, 1) ./ sqrt(s(1, 1));
+    G = conj(v(:, 1)) ./ sqrt(s(1, 1));
 
     S = TraceGenerate(P, G);
     err = TraceError(I, S);
