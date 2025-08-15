@@ -60,7 +60,6 @@ end
 % plot(wlen_I,I_withoutNoise(:,end/2+1),c./(F+f0*2),I_withoutNoise_origin(:,end/2+1))
 % plotTrace(I_withoutNoise_origin, T, F);
 
-% [P, P_sp, df0] = removeFirstOrderPhase(T, P); % P_sp has been removed f0
 %% add Noise
 bitDepth = 16;
 alpha = 0;

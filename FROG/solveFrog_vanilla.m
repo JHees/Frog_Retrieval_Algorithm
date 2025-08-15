@@ -31,7 +31,7 @@ while i <= iterMax
 end
 
 P = P ./ max(abs(P));
-[res.P, res.P_sp] = removeFirstOrderPhase(P);
+[res.P,res.P_sp]=PulseNormalized(T,P);
 res.iter = i-1;
 res.err = res.err(1:i-1);
 end

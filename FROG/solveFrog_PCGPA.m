@@ -56,8 +56,6 @@ function [res] = solveFrog_PCGPA(I, initialGuess, iterMax, eps, method)
     res.P = P ./ max(abs(P));
     res.G = G ./ max(abs(G));
 
-    % [res.P] = removeFirstOrderPhase(P);
-    % [res.G] = removeFirstOrderPhase(G);
     res.iter = [init.iter, i - 1];
     res.err = [init.err, res.err(1:i - 1)];
 

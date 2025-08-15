@@ -27,8 +27,6 @@ while i <= iterMax
     i = i + 1;
 end
 res.P = P ./ max(abs(P));
-
-% [res.P, res.P_sp] = removeFirstOrderPhase(P);
 res.iter = [init.iter, i-1];
 res.err = [init.err, res.err(1:i-1)];
 

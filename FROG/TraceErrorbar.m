@@ -2,15 +2,15 @@ function Errorbar = TraceErrorbar(T,pulse, RetrievalFunc, BootStrapCount)
     N = length(pulse);
     P_retrieval = zeros(N, BootStrapCount);
     P_retrieval_sp = zeros(N, BootStrapCount);
-    % [pulse, pulse_sp] = removeFirstOrderPhase(pulse);
-    [pulse,pulse_sp]=removeFirstOrderPhase(T,pulse);
+
+    [pulse,pulse_sp]=PulseNormalized(T,pulse);
     for i = 1:BootStrapCount
         ind = randperm(N);
         ind = ind(1:N / 2);
         P = pulse;
         P(ind) = 0;
         P = RetrievalFunc(P);
-        [P_retrieval(:, i), P_retrieval_sp(:, i)]=removeFirstOrderPhase(T,P);
+        [P_retrieval(:, i), P_retrieval_sp(:, i)]=PulseNormalized(T,P);
     end
     Errorbar = zeros(N, 8);
     retrieval_intensity = abs(P_retrieval).^2;
